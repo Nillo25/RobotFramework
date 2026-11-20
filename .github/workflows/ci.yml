@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # Own copy of Restful Booker, so CI does not depend on the shared public instance.
+      booker:
+        image: mwinteringham/restfulbooker:latest
+        ports:
+          - 3001:3001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies and browser
+        run: make install
+
+      - name: Wait for Restful Booker
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:3001/ping && exit 0
+            sleep 2
+          done
+          echo "Restful Booker did not start" && exit 1
+
+      - name: Unit tests for the keyword library
+        run: make unit
+
+      - name: Robot Framework UI and API tests
+        run: >
+          .venv/bin/robot --exclude llm
+          --variable BASE_URL:http://localhost:3001
+          --outputdir results tests
+
+      - name: Upload Robot Framework report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-results
+          path: results/

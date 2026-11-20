@@ -1,0 +1,37 @@
+name: llm
+
+# Calls a paid API, so it runs on demand and once a week, not on every push.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  llm-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet -r requirements.txt
+
+      - name: LLM assistant tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: .venv/bin/robot --include llm --outputdir results tests
+
+      - name: Upload Robot Framework report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-results
+          path: results/
