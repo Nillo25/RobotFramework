@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Robot Framework / Browser library output
+results/
+browser/
+log.html
+report.html
+output.xml
+playwright-log.txt
